@@ -157,6 +157,48 @@ func TestServerAuthCallback(t *testing.T) {
 	assert.Equal("", fwd.Path, "valid request should be redirected to return url")
 }
 
+func TestServerAuthCallbackAuthHost(t *testing.T) {
+	assert := assert.New(t)
+	config, _ = NewConfig([]string{})
+	config.AuthHost = "example.com"
+
+	// Setup OAuth server
+	server, serverURL := NewOAuthServer(t)
+	defer server.Close()
+	config.Providers.Google.TokenURL = &url.URL{
+		Scheme: serverURL.Scheme,
+		Host:   serverURL.Host,
+		Path:   "/token",
+	}
+	config.Providers.Google.UserURL = &url.URL{
+		Scheme: serverURL.Scheme,
+		Host:   serverURL.Host,
+		Path:   "/userinfo",
+	}
+
+	// Should pass auth response request to callback
+	req := newDefaultHttpRequest("/_oauth")
+	res, _ := doHttpRequest(req, nil)
+	assert.Equal(401, res.StatusCode, "auth callback without cookie shouldn't be authorised")
+
+	// Should catch invalid csrf cookie
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:http://redirect")
+	c := MakeCSRFCookie(req, "nononononononononononononononono")
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(401, res.StatusCode, "auth callback with invalid cookie shouldn't be authorised")
+
+	// Should redirect valid request
+	req = newDefaultHttpRequest("/_oauth?state=12345678901234567890123456789012:google:http://redirect")
+	c = MakeCSRFCookie(req, "12345678901234567890123456789012")
+	res, _ = doHttpRequest(req, c)
+	assert.Equal(307, res.StatusCode, "valid auth callback should be allowed")
+
+	fwd, _ := res.Location()
+	assert.Equal("http", fwd.Scheme, "valid request should be redirected to return url")
+	assert.Equal("redirect", fwd.Host, "valid request should be redirected to return url")
+	assert.Equal("", fwd.Path, "valid request should be redirected to return url")
+}
+
 func TestServerDefaultAction(t *testing.T) {
 	assert := assert.New(t)
 	config, _ = NewConfig([]string{})
