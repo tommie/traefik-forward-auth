@@ -55,30 +55,28 @@ func ValidateCookie(r *http.Request, c *http.Cookie) (string, error) {
 	return parts[2], nil
 }
 
-// Validate email
-func ValidateEmail(email string) bool {
-	found := false
-	if len(config.Whitelist) > 0 {
-		for _, whitelist := range config.Whitelist {
-			if email == whitelist {
-				found = true
-			}
-		}
-	} else if len(config.Domains) > 0 {
+// ValidateEmail authorizes an email based on whitelists. Returns
+// whether the email is allowed access, and the preferred username.
+func ValidateEmail(email string) (bool, string) {
+	if len(config.Whitelist) != 0 {
+		username, found := config.Whitelist[email]
+		return found, username
+	}
+
+	if len(config.Domains) > 0 {
 		parts := strings.Split(email, "@")
 		if len(parts) < 2 {
-			return false
+			return false, ""
 		}
 		for _, domain := range config.Domains {
 			if domain == parts[1] {
-				found = true
+				return true, email
 			}
 		}
-	} else {
-		return true
+		return false, ""
 	}
 
-	return found
+	return true, email
 }
 
 // Utility methods

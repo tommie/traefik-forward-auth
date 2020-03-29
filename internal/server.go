@@ -94,7 +94,7 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 		}
 
 		// Validate user
-		valid := ValidateEmail(email)
+		valid, username := ValidateEmail(email)
 		if !valid {
 			logger.WithFields(logrus.Fields{
 				"email": email,
@@ -105,7 +105,8 @@ func (s *Server) AuthHandler(providerName, rule string) http.HandlerFunc {
 
 		// Valid request
 		logger.Debugf("Allowing valid request ")
-		w.Header().Set("X-Forwarded-User", email)
+		w.Header().Set("X-Forwarded-User", username)
+		w.Header().Set("X-Forwarded-Email", email)
 		w.WriteHeader(200)
 	}
 }

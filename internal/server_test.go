@@ -115,6 +115,10 @@ func TestServerAuthHandlerValid(t *testing.T) {
 	users := res.Header["X-Forwarded-User"]
 	assert.Len(users, 1, "valid request should have X-Forwarded-User header")
 	assert.Equal([]string{"test@example.com"}, users, "X-Forwarded-User header should match user")
+
+	// Should pass through email
+	emails := res.Header["X-Forwarded-Email"]
+	assert.Equal(users, emails, "X-Forwarded-Email header should match user")
 }
 
 func TestServerAuthCallback(t *testing.T) {

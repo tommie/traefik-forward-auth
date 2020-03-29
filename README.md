@@ -142,7 +142,7 @@ Application Options:
   --lifetime=                                           Lifetime in seconds (default: 43200) [$LIFETIME]
   --url-path=                                           Callback URL Path (default: /_oauth) [$URL_PATH]
   --secret=                                             Secret used for signing (required) [$SECRET]
-  --whitelist=                                          Only allow given email addresses, can be set multiple times [$WHITELIST]
+  --whitelist=                                          Only allow given email addresses, can be set multiple times. Entries may be "email:username" to map emails to custom usernames [$WHITELIST]
   --rule.<name>.<param>=                                Rule definitions, param can be: "action", "rule" or "provider"
 
 Google Provider:
@@ -316,9 +316,13 @@ You can restrict who can login with the following parameters:
 
 Note, if you pass `whitelist` then only this is checked and `domain` is effectively ignored.
 
+The whitelist can contain entries on the form `thom@test.com:theuser`, which will cause the server to report `theuser` as the authenticated user, instead of the email address.
+
 ### Forwarded Headers
 
 The authenticated user is set in the `X-Forwarded-User` header, to pass this on add this to the `authResponseHeaders` config option in traefik, as shown [here](https://github.com/thomseddon/traefik-forward-auth/blob/master/examples/docker-compose-dev.yml).
+
+The user's email address is available in `X-Forwarded-Email`. If the `whitelist` config option is empty, or it doesn't contain explicit user names, the `X-Forwarded-User` and `X-Forwarded-Email` will be the same.
 
 ### Operation Modes
 

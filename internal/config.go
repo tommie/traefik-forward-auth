@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -35,7 +36,7 @@ type Config struct {
 	LifetimeString  int                  `long:"lifetime" env:"LIFETIME" default:"43200" description:"Lifetime in seconds"`
 	Path            string               `long:"url-path" env:"URL_PATH" default:"/_oauth" description:"Callback URL Path"`
 	SecretString    string               `long:"secret" env:"SECRET" description:"Secret used for signing (required)" json:"-"`
-	Whitelist       CommaSeparatedList   `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times"`
+	Whitelist       CommaSeparatedMap    `long:"whitelist" env:"WHITELIST" description:"Only allow given email addresses, can be set multiple times. Entries may be 'email:username' to map emails to custom usernames"`
 
 	Providers provider.Providers `group:"providers" namespace:"providers" env-namespace:"PROVIDERS"`
 	Rules     map[string]*Rule   `long:"rule.<name>.<param>" description:"Rule definitions, param can be: \"action\", \"rule\" or \"provider\""`
@@ -68,7 +69,8 @@ func NewGlobalConfig() *Config {
 
 func NewConfig(args []string) (*Config, error) {
 	c := &Config{
-		Rules: map[string]*Rule{},
+		Rules:     map[string]*Rule{},
+		Whitelist: map[string]string{},
 	}
 
 	err := c.parseFlags(args)
@@ -354,4 +356,35 @@ func (c *CommaSeparatedList) UnmarshalFlag(value string) error {
 
 func (c *CommaSeparatedList) MarshalFlag() (string, error) {
 	return strings.Join(*c, ","), nil
+}
+
+// Legacy support for comma separated maps
+
+type CommaSeparatedMap map[string]string
+
+func (c *CommaSeparatedMap) UnmarshalFlag(value string) error {
+	for _, s := range strings.Split(value, ",") {
+		ss := strings.SplitN(s, ":", 2)
+		if len(ss) == 1 {
+			// Key and value are the same.
+			(*c)[ss[0]] = ss[0]
+		} else {
+			// A separate key and value.
+			(*c)[ss[0]] = ss[1]
+		}
+	}
+	return nil
+}
+
+func (c *CommaSeparatedMap) MarshalFlag() (string, error) {
+	ss := make([]string, 0, len(*c))
+	for k, v := range *c {
+		if k == v {
+			ss = append(ss, k)
+		} else {
+			ss = append(ss, k+":"+v)
+		}
+	}
+	sort.Strings(ss)
+	return strings.Join(ss, ","), nil
 }

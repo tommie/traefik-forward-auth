@@ -67,32 +67,33 @@ func TestAuthValidateEmail(t *testing.T) {
 	config, _ = NewConfig([]string{})
 
 	// Should allow any
-	v := ValidateEmail("test@test.com")
+	v, _ := ValidateEmail("test@test.com")
 	assert.True(v, "should allow any domain if email domain is not defined")
-	v = ValidateEmail("one@two.com")
+	v, _ = ValidateEmail("one@two.com")
 	assert.True(v, "should allow any domain if email domain is not defined")
 
 	// Should block non matching domain
 	config.Domains = []string{"test.com"}
-	v = ValidateEmail("one@two.com")
+	v, _ = ValidateEmail("one@two.com")
 	assert.False(v, "should not allow user from another domain")
 
 	// Should allow matching domain
 	config.Domains = []string{"test.com"}
-	v = ValidateEmail("test@test.com")
+	v, _ = ValidateEmail("test@test.com")
 	assert.True(v, "should allow user from allowed domain")
 
 	// Should block non whitelisted email address
 	config.Domains = []string{}
-	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("one@two.com")
+	config.Whitelist = map[string]string{"test@test.com": "testuser"}
+	v, _ = ValidateEmail("one@two.com")
 	assert.False(v, "should not allow user not in whitelist")
 
 	// Should allow matching whitelisted email address
 	config.Domains = []string{}
-	config.Whitelist = []string{"test@test.com"}
-	v = ValidateEmail("test@test.com")
+	config.Whitelist = map[string]string{"test@test.com": "testuser"}
+	v, user := ValidateEmail("test@test.com")
 	assert.True(v, "should allow user in whitelist")
+	assert.Equal("testuser", user, "should return the mapper username")
 }
 
 func TestRedirectUri(t *testing.T) {
