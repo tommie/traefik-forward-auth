@@ -55,7 +55,11 @@ func (s *Server) buildRoutes() {
 // RootHandler Overwrites the request method, host and URL with those from the
 // forwarded request so it's correctly routed by mux
 func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
-	// Modify request
+	// Modify a copy: net/http decides how to write the response from the
+	// original request's method. Overwriting it with a forwarded HEAD made
+	// the reply to Traefik's GET a bodiless, unterminated response, which
+	// Traefik v3 fails on with a 500.
+	r = r.Clone(r.Context())
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
 
