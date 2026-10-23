@@ -31,10 +31,16 @@ func (s *Server) buildRoutes() {
 	// Let's build a muxer
 	for name, rule := range config.Rules {
 		matchRule := rule.formattedRule()
+		var handler http.HandlerFunc
 		if rule.Action == "allow" {
-			_ = s.muxer.AddRoute(matchRule, 1, s.AllowHandler(name))
+			handler = s.AllowHandler(name)
 		} else {
-			_ = s.muxer.AddRoute(matchRule, 1, s.AuthHandler(rule.Provider, name))
+			handler = s.AuthHandler(rule.Provider, name)
+		}
+		// A rule that fails to parse would otherwise be dropped silently,
+		// sending its requests to the default action instead.
+		if err := s.muxer.AddRoute(matchRule, 1, handler); err != nil {
+			log.Fatalf("Invalid rule %q (%s): %v", name, matchRule, err)
 		}
 	}
 

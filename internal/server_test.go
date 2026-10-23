@@ -87,6 +87,26 @@ func TestServerRootHandler(t *testing.T) {
 // A forwarded HEAD request still arrives as a GET from Traefik, so the
 // response must be a complete GET response. This needs a real server:
 // httptest.ResponseRecorder doesn't do HTTP framing.
+func TestServerInvalidRuleIsFatal(t *testing.T) {
+	assert := assert.New(t)
+	config = newDefaultConfig()
+	config.Rules = map[string]*Rule{
+		"broken": {Action: "allow", Rule: "Host(`example.com`) &&"},
+	}
+	defer func() { config = newDefaultConfig() }()
+
+	var hook *test.Hook
+	log, hook = test.NewNullLogger()
+	log.ExitFunc = func(code int) {}
+
+	NewServer()
+
+	entry := hook.LastEntry()
+	require.NotNil(t, entry, "an invalid rule should be logged")
+	assert.Equal(logrus.FatalLevel, entry.Level, "an invalid rule should be fatal")
+	assert.Contains(entry.Message, `"broken"`)
+}
+
 func TestServerRootHandlerForwardedHead(t *testing.T) {
 	assert := assert.New(t)
 	config = newDefaultConfig()
